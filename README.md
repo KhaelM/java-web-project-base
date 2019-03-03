@@ -1,1 +1,1 @@
-Base project for java
+Base for web development using jdbc and reflect
