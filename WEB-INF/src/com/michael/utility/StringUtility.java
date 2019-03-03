@@ -21,7 +21,7 @@ public class StringUtility {
         return result;
     }
 
-    public String fromUnderscoreToPascalCase(String string) {
+    public static String fromUnderscoreToPascalCase(String string) {
         if (string.contains("_")) {
             String[] splitted = string.split("_");
             string = firstUpper(splitted[0], true);
@@ -31,7 +31,7 @@ public class StringUtility {
             }
         }
 
-        return string;
+        return firstUpper(string, false);
     }
 
     public static String fromUnderscoreToCamelCase(String string) {
