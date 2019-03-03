@@ -16,7 +16,9 @@ public class Main {
             connection = ConnectionManager.getOracleConnection("michael", "oracle4loser");
             GeneralizedFunction generalizedFunction = new GeneralizedFunction();
             Person person = new Person("Arnaud");
-            generalizedFunction.insert(person, "test_wannabe", connection);
+            person.setId("T21");
+            person.setSomeAttribute("Loan");
+            generalizedFunction.update(connection, person, "test_wannabe");
             
         } catch(Exception e) {
             e.printStackTrace();
