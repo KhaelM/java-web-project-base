@@ -41,75 +41,73 @@ public class GeneralizedFunction {
         return fields;
     }
 
-    public void update(Connection connection, Object object, String tableName, String[] filters) throws Exception {
+    public void update(Connection connection, Object object, String tableName) throws Exception {
         DatabaseMetaData meta = connection.getMetaData();
         String databaseProductName = meta.getDatabaseProductName();
         PreparedStatement preparedStatement = null;
+
         if(databaseProductName.compareToIgnoreCase("Oracle") == 0) {
             preparedStatement = connection.prepareStatement("ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'");
-            preparedStatement.execute();
+            preparedStatement.executeUpdate();
             preparedStatement = connection.prepareStatement("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'");
-            preparedStatement.execute();     
+            preparedStatement.executeUpdate();     
         }
-        preparedStatement = connection.prepareStatement("SELECT * FROM "+ tableName);
-        ResultSet resultSet = preparedStatement.executeQuery();
-        String[] columns = new String[resultSet.getMetaData().getColumnCount()];
-        
-        for (int i = 1; i <= columns.length; i++) {
-            columns[i-1] = resultSet.getMetaData().getColumnName(i);    
+
+        ArrayList<String> primaryKeys = getPrimaryKeysColumn(tableName, connection);
+        ArrayList<String> columnNames = getTableColumns(tableName, connection);
+
+        for (int i = 0; i < columnNames.size(); i++) {
+            columnNames.set(i, StringUtility.fromUnderscoreToCamelCase(columnNames.get(i)));
         }
-        resultSet.close();
         
         Class<?> baseClass = object.getClass();
-        Field[] fieldList = new Field[columns.length];
+        ArrayList<String> fieldsWithoutPrimary = new ArrayList<String>();
+        Field[] fieldList = baseClass.getDeclaredFields();
 
         for (int i = 0; i < fieldList.length; i++) {
-            fieldList[i] = baseClass.getDeclaredField(columns[i]);
+            fieldsWithoutPrimary.add(fieldList[i].getName());
         }
 
-        String getterName = null;
-        Method getter = null;
+        com.michael.reflect.GeneralizedFunction.deleteCommonElement(fieldsWithoutPrimary, primaryKeys);
+        List<String> commonFieldsList = com.michael.reflect.GeneralizedFunction.findCommonElements(fieldsWithoutPrimary.toArray(new String[0]), columnNames.toArray(new String[0])).stream().map(obj -> Objects.toString(obj, null)).collect(Collectors.toList());
+
         String request = "UPDATE " + tableName + " SET ";
         
-        for(int i = 0; i < fieldList.length; i++) {
-            getterName = "get" + StringUtility.firstUpper(fieldList[i].getName(), false);
-            getter = baseClass.getDeclaredMethod(getterName);
-            if(i != fieldList.length - 1) {
-                if(getter.invoke(object) != null) {
-                    request += "\""+ fieldList[i].getName() + "\" = ?, ";
-                } else {
-                    request += "\""+ fieldList[i].getName() + "\" =  null, ";
-                }
+        for(int i = 0; i < commonFieldsList.size(); i++) {
+            request += StringUtility.fromCamelCaseToUnderscore(commonFieldsList.get(i)) + " = ?";
+            
+            if(i != commonFieldsList.size() - 1) {
+                request += ", ";
             } else {
-                if(getter.invoke(object) != null) {
-                    request += "\""+ fieldList[i].getName() + "\" = ? WHERE ";
-                } else {
-                    request += "\""+ fieldList[i].getName() + "\" = null WHERE ";
-                }
+                request += " WHERE ";
             }
         }        
 
-        for(int i = 0; i < filters.length; i++) {
-            getterName = "get" + StringUtility.firstUpper(filters[i], false);
-            getter = baseClass.getDeclaredMethod(getterName);
-            request += "\""+filters[i]+"\" = ? ";
+        for(int i = 0; i < primaryKeys.size(); i++) {
+            request += primaryKeys.get(i) +" = ?";
+
+            if(i != primaryKeys.size() - 1) {
+                request += " AND ";
+            }
         }
         
         preparedStatement = connection.prepareStatement(request);
 
         int index = 1;
-        for(int i = 0; i < fieldList.length; i++) {
-            Method get = baseClass.getDeclaredMethod("get" + StringUtility.firstUpper(fieldList[i].getName(), false));
+        for(int i = 0; i < commonFieldsList.size(); i++) {
+            Method get = baseClass.getDeclaredMethod("get" + StringUtility.firstUpper(commonFieldsList.get(i), false));
             preparedStatement.setObject(index, get.invoke(object));
             index++;
         }
 
-        for (int i = 0; i < filters.length; i++) {
-            Method get = baseClass.getDeclaredMethod("get"+ StringUtility.firstUpper(filters[i], false));
+        for (int i = 0; i < primaryKeys.size(); i++) {
+            Method get = baseClass.getDeclaredMethod("get"+ StringUtility.fromUnderscoreToPascalCase(primaryKeys.get(i)));
             preparedStatement.setObject(index, get.invoke(object));
             index++;
         }
         
+        System.out.println("Request = " + request);
+
         preparedStatement.executeUpdate();
         preparedStatement.close();
     }
@@ -201,8 +199,7 @@ public class GeneralizedFunction {
         return strings;
     }
 
-    public void insert(Object object, String tableName, Connection connection) throws Exception {
-        
+    public void insert(Object object, String tableName, Connection connection) throws Exception {        
         if(tableName == null || tableName == "") {
             throw new Exception("Table name must be set.");
         }
@@ -216,7 +213,6 @@ public class GeneralizedFunction {
             preparedStatement = connection.prepareStatement("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'");
             preparedStatement.execute();     
         }
-
         
         Class<?> baseClass = object.getClass();
         ArrayList<String> primaryKeys = getPrimaryKeysColumn(tableName, connection);
@@ -236,9 +232,6 @@ public class GeneralizedFunction {
         com.michael.reflect.GeneralizedFunction.deleteCommonElement(fieldsWithoutPrimary, primaryKeys);
         List<String> commonFieldsList = com.michael.reflect.GeneralizedFunction.findCommonElements(fieldsWithoutPrimary.toArray(new String[0]), columnNames.toArray(new String[0])).stream().map(obj -> Objects.toString(obj, null)).collect(Collectors.toList());
 
-
-        Method method = null;
-
         String request = "INSERT INTO " + tableName + " (";
         for (int i = 0; i < commonFieldsList.size(); i++) {
             if (i != commonFieldsList.size() - 1) {
@@ -257,6 +250,7 @@ public class GeneralizedFunction {
         }
 
         preparedStatement = connection.prepareStatement(request);
+        Method method = null;
 
         for (int i = 0; i < commonFieldsList.size(); i++) {
             method = baseClass.getDeclaredMethod("get" + StringUtility.firstUpper(commonFieldsList.get(i), false));
