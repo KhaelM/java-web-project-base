@@ -2,9 +2,9 @@ package com.michael.utility;
 
 
 /**
- * StringFormatter
+ * StringUtility
  */
-public class StringFormatter {
+public class StringUtility {
 
     public static String firstUpper(String string, boolean isRestLower) {
         if(isRestLower) {

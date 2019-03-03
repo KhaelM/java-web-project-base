@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.michael.utility.StringFormatter;
+import com.michael.utility.StringUtility;
 
 /**
  * Function
@@ -97,7 +97,7 @@ public class GeneralizedFunction {
         String request = "UPDATE " + tableName + " SET ";
         
         for(int i = 0; i < fieldList.length; i++) {
-            getterName = "get" + StringFormatter.firstUpper(fieldList[i].getName(), false);
+            getterName = "get" + StringUtility.firstUpper(fieldList[i].getName(), false);
             getter = baseClass.getDeclaredMethod(getterName);
             if(i != fieldList.length - 1) {
                 if(getter.invoke(object) != null) {
@@ -115,7 +115,7 @@ public class GeneralizedFunction {
         }        
 
         for(int i = 0; i < filters.length; i++) {
-            getterName = "get" + StringFormatter.firstUpper(filters[i], false);
+            getterName = "get" + StringUtility.firstUpper(filters[i], false);
             getter = baseClass.getDeclaredMethod(getterName);
             request += "\""+filters[i]+"\" = ? ";
         }
@@ -124,13 +124,13 @@ public class GeneralizedFunction {
 
         int index = 1;
         for(int i = 0; i < fieldList.length; i++) {
-            Method get = baseClass.getDeclaredMethod("get" + StringFormatter.firstUpper(fieldList[i].getName(), false));
+            Method get = baseClass.getDeclaredMethod("get" + StringUtility.firstUpper(fieldList[i].getName(), false));
             preparedStatement.setObject(index, get.invoke(object));
             index++;
         }
 
         for (int i = 0; i < filters.length; i++) {
-            Method get = baseClass.getDeclaredMethod("get"+ StringFormatter.firstUpper(filters[i], false));
+            Method get = baseClass.getDeclaredMethod("get"+ StringUtility.firstUpper(filters[i], false));
             preparedStatement.setObject(index, get.invoke(object));
             index++;
         }
@@ -181,7 +181,7 @@ public class GeneralizedFunction {
         String[] columnNames = new String[nbColumn];
         
         for (int i = 1; i <= nbColumn; i++) {
-            columnNames[i-1] = StringFormatter.fromUnderscoreToCamelCase(resultSet.getMetaData().getColumnName(i).toLowerCase());    
+            columnNames[i-1] = StringUtility.fromUnderscoreToCamelCase(resultSet.getMetaData().getColumnName(i).toLowerCase());    
         }
 
         List<String> concernedField = com.michael.reflect.GeneralizedFunction.findCommonElements(fieldToString, columnNames).stream().map(object -> Objects.toString(object, null)).collect(Collectors.toList());
@@ -191,21 +191,21 @@ public class GeneralizedFunction {
             Object object = baseClass.getDeclaredConstructor().newInstance();
             baseClass.cast(object);
             for (int j = 0; j < concernedField.size(); j++) {
-                Method method = baseClass.getMethod("set"+ StringFormatter.firstUpper(concernedField.get(j), false), getField(baseClass,concernedField.get(j)).getType());
+                Method method = baseClass.getMethod("set"+ StringUtility.firstUpper(concernedField.get(j), false), getField(baseClass,concernedField.get(j)).getType());
                 String returnType = method.getGenericParameterTypes()[0].toString();
 
                 if (returnType.compareTo("int") == 0 || returnType.compareTo("class java.lang.Integer") == 0) {
-                    method.invoke(object, resultSet.getInt(StringFormatter.fromCamelCaseToUnderscore(concernedField.get(j))));
+                    method.invoke(object, resultSet.getInt(StringUtility.fromCamelCaseToUnderscore(concernedField.get(j))));
                 } else if (returnType.compareTo("float") == 0 || returnType.compareTo("class java.lang.Float") == 0) {
-                    method.invoke(object, resultSet.getFloat(StringFormatter.fromCamelCaseToUnderscore(concernedField.get(j))));
+                    method.invoke(object, resultSet.getFloat(StringUtility.fromCamelCaseToUnderscore(concernedField.get(j))));
                 } else if (returnType.compareTo("double") == 0 || returnType.compareTo("class java.lang.Double") == 0) {
-                    method.invoke(object, resultSet.getDouble(StringFormatter.fromCamelCaseToUnderscore(concernedField.get(j))));
+                    method.invoke(object, resultSet.getDouble(StringUtility.fromCamelCaseToUnderscore(concernedField.get(j))));
                 } else if(returnType.compareTo("class java.util.Date") == 0 || returnType.compareTo("class java.sql.Date") == 0) {
-                    method.invoke(object, resultSet.getDate(StringFormatter.fromCamelCaseToUnderscore(concernedField.get(j))));
+                    method.invoke(object, resultSet.getDate(StringUtility.fromCamelCaseToUnderscore(concernedField.get(j))));
                 } else if(returnType.compareTo("class java.sql.Timestamp") == 0) {
-                    method.invoke(object, resultSet.getTimestamp(StringFormatter.fromCamelCaseToUnderscore(concernedField.get(j))));
+                    method.invoke(object, resultSet.getTimestamp(StringUtility.fromCamelCaseToUnderscore(concernedField.get(j))));
                 }else {
-                    method.invoke(object, resultSet.getString(StringFormatter.fromCamelCaseToUnderscore(concernedField.get(j))));
+                    method.invoke(object, resultSet.getString(StringUtility.fromCamelCaseToUnderscore(concernedField.get(j))));
                 }
             }
             finalObjects[i] = object;
@@ -248,7 +248,7 @@ public class GeneralizedFunction {
         ArrayList<String> columnNames = getTableColumns(tableName, connection);
 
         for (int i = 0; i < columnNames.size(); i++) {
-            columnNames.set(i, StringFormatter.fromUnderscoreToCamelCase(columnNames.get(i)));
+            columnNames.set(i, StringUtility.fromUnderscoreToCamelCase(columnNames.get(i)));
         }
         
         ArrayList<String> fieldsWithoutPrimary = new ArrayList<String>();
@@ -267,9 +267,9 @@ public class GeneralizedFunction {
         String request = "INSERT INTO " + tableName + " (";
         for (int i = 0; i < commonFieldsList.size(); i++) {
             if (i != commonFieldsList.size() - 1) {
-                request += StringFormatter.fromCamelCaseToUnderscore(commonFieldsList.get(i))+ ", ";
+                request += StringUtility.fromCamelCaseToUnderscore(commonFieldsList.get(i))+ ", ";
             } else {
-                request +=StringFormatter.fromCamelCaseToUnderscore(commonFieldsList.get(i)) + ") VALUES(";
+                request +=StringUtility.fromCamelCaseToUnderscore(commonFieldsList.get(i)) + ") VALUES(";
             }
         }
 
@@ -284,7 +284,7 @@ public class GeneralizedFunction {
         preparedStatement = connection.prepareStatement(request);
 
         for (int i = 0; i < commonFieldsList.size(); i++) {
-            method = baseClass.getDeclaredMethod("get" + StringFormatter.firstUpper(commonFieldsList.get(i), false));
+            method = baseClass.getDeclaredMethod("get" + StringUtility.firstUpper(commonFieldsList.get(i), false));
             preparedStatement.setObject(i+1, method.invoke(object));
         }
 
